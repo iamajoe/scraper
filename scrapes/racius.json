@@ -1,0 +1,91 @@
+{
+  "baseURL": "https://www.racius.com/empresas-em-portugal/em-atividade",
+  "maxPageRequests": 1000,
+  "cacheFolder": "./_cache",
+  "outputFile": "./data_racius.csv",
+
+  "crawlSelector": ".pagination a[href]",
+	"dataURLSelector": "a.title[href]",
+  "dataSelector": "#second-container",
+  "details": [
+    {
+      "name": "Title",
+      "type": "ChildText",
+      "selector": "#company-header-title",
+      "required": true
+    }, {
+      "type": "ForEach",
+      "selector": ".company-table-block tr",
+      "children": [
+        {
+          "type": "Case",
+          "selector": "td:first-child",
+          "equals": "NIF",
+          "children": [
+            {
+              "name": "NIF",
+              "type": "ChildText",
+              "selector": "td:nth-child(2)"
+            },
+            {
+              "name": "Address",
+              "type": "ChildText",
+              "selector": "td:nth-child(4)"
+            }
+          ]
+        },
+        {
+          "type": "Case",
+          "selector": "td:first-child",
+          "equals": "Forma Jurídica",
+          "children": [
+            {
+              "name": "Legal form",
+              "type": "ChildText",
+              "selector": "td:nth-child(2)"
+            },
+            {
+              "name": "Social capital",
+              "type": "ChildText",
+              "selector": "td:nth-child(4)"
+            }
+          ]
+        },
+        {
+          "type": "Case",
+          "selector": "td:first-child",
+          "equals": "Data Constituição",
+          "children": [
+            {
+              "name": "Founding date",
+              "type": "ChildText",
+              "selector": "td:nth-child(2)"
+            },
+            {
+              "name": "CAE",
+              "type": "ChildText",
+              "selector": "td:nth-child(4)"
+            }
+          ]
+        },
+        {
+          "type": "Case",
+          "selector": "td:first-child",
+          "equals": "Última Atualização",
+          "children": [
+            {
+              "name": "Last update",
+              "type": "ChildText",
+              "selector": "td:nth-child(2)"
+            },
+            {
+              "name": "Available acts",
+              "type": "ChildText",
+              "selector": "td:nth-child(4)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
