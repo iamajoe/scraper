@@ -8,9 +8,23 @@ import (
 )
 
 // FetchURL will fetch an URL
-func FetchURL(url string, c config.Config) ([]map[string]string, error) {
+func FetchURL(c config.Config, dataArr []map[string]string, onNewData func(d []map[string]string)) ([]map[string]string, error) {
+	// TODO: what about agent?
+	// TODO: what about cookies?
+	// TODO: what about local storage?
+
 	var pagesVisited []string
-	var dataArr []map[string]string
+
+	// old pages should be already on pages visited
+	for _, value := range dataArr {
+		if url, ok := value["URL"]; ok {
+			pagesVisited = append(pagesVisited, url)
+		}
+
+		if url, ok := value["url"]; ok {
+			pagesVisited = append(pagesVisited, url)
+		}
+	}
 
 	limit := colly.LimitRule{
 		// DomainGlob:  "*httpbin.*",
@@ -82,6 +96,9 @@ func FetchURL(url string, c config.Config) ([]map[string]string, error) {
 		// Save the single
 		single["URL"] = page
 		dataArr = append(dataArr, single)
+
+		// inform of changes
+		onNewData(dataArr)
 	})
 
 	collector.OnHTML(c.GetCrawlSelector(), func(e *colly.HTMLElement) {

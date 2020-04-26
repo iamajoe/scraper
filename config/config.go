@@ -18,6 +18,7 @@ type DetailConfig struct {
 	Name         string         `json:"name"`
 	TypeSelector string         `json:"type"`
 	Selector     string         `json:"selector"`
+	URL          string         `json:"url"`
 	Equals       string         `json:"equals"`
 	Required     bool           `json:"required"`
 	Children     []DetailConfig `json:"children"`

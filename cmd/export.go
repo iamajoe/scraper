@@ -5,9 +5,46 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 )
+
+// decodeCSV decodes a file csv into a map
+func decodeCSV(csvPath string) ([]map[string]string, error) {
+	var data []map[string]string
+
+	f, err := os.Open(csvPath)
+	if err != nil {
+		return data, err
+	}
+	defer f.Close()
+
+	csvReader := csv.NewReader(f)
+	rows, err := csvReader.ReadAll()
+	if err != nil {
+		return data, err
+	}
+
+	headerRow := rows[0]
+
+	// iterate the records now to convert them
+	for i, row := range rows {
+		if i == 0 {
+			continue
+		}
+
+		rowData := make(map[string]string)
+
+		for c, column := range row {
+			rowData[headerRow[c]] = column
+		}
+
+		data = append(data, rowData)
+	}
+
+	return data, nil
+}
 
 // encodeCSV encodes data to csv
 func encodeCSV(rows []map[string]string) ([]byte, error) {
@@ -67,6 +104,9 @@ func exportData(data []map[string]string, outputFile string) (err error) {
 			return err
 		}
 	} else if strings.Contains(outputFile, ".csv") {
+		// TODO: we want to make sure we don't have similar data, that way we can keep saving
+		// TODO: we want to make unique per "URL"
+
 		file, err = encodeCSV(data)
 		if err != nil {
 			return err

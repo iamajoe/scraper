@@ -2,15 +2,47 @@ package domain
 
 import (
 	"errors"
+	"strings"
+	"sync"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/sendoushi/scrapper/config"
 )
 
 // getInternalDetail sets on a single the internal details
-func getInternalDetail(el *colly.HTMLElement, detail config.DetailConfig, single map[string]string) error {
-	// fmt.Printf("%+v\n\n\n", detail.TypeSelector)
+func getInternalDetail(el *colly.HTMLElement, detail config.DetailConfig, single map[string]string, c config.Config) error {
 	switch detail.TypeSelector {
+	case "SimpleScrape":
+		var err error
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		// DEV: this special case needs to create a scraper to try and find
+		//			the right data
+		collector := colly.NewCollector()
+
+		collector.OnHTML(detail.Selector, func(nestedEl *colly.HTMLElement) {
+			for _, child := range detail.Children {
+				err = getInternalDetail(nestedEl, child, single, c)
+			}
+
+			wg.Done()
+		})
+
+		// we want to make sure variables are replaced on the url
+		url := detail.URL
+		for k, value := range single {
+			url = strings.ReplaceAll(url, "[["+k+"]]", value)
+		}
+
+		// visit the page
+		c.GetLogger().Log("--- visiting_internal_detail", url)
+		collector.Visit(url)
+		wg.Wait()
+
+		if err != nil {
+			return err
+		}
 	case "ChildText":
 		single[detail.Name] = el.ChildText(detail.Selector)
 
@@ -22,7 +54,7 @@ func getInternalDetail(el *colly.HTMLElement, detail config.DetailConfig, single
 
 		el.ForEach(detail.Selector, func(_ int, nestedEl *colly.HTMLElement) {
 			for _, child := range detail.Children {
-				err = getInternalDetail(nestedEl, child, single)
+				err = getInternalDetail(nestedEl, child, single, c)
 			}
 		})
 
@@ -32,7 +64,7 @@ func getInternalDetail(el *colly.HTMLElement, detail config.DetailConfig, single
 	case "Case":
 		if detail.Equals == el.ChildText(detail.Selector) {
 			for _, child := range detail.Children {
-				err := getInternalDetail(el, child, single)
+				err := getInternalDetail(el, child, single, c)
 				if err != nil {
 					return err
 				}
@@ -48,7 +80,7 @@ func getSingleDetails(el *colly.HTMLElement, c config.Config) (map[string]string
 	single := make(map[string]string)
 
 	for _, detail := range c.GetDetails() {
-		err := getInternalDetail(el, detail, single)
+		err := getInternalDetail(el, detail, single, c)
 		if err != nil {
 			return single, err
 		}

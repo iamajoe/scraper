@@ -18,12 +18,17 @@ func main() {
 		panic(err)
 	}
 
-	dataArr, err := domain.FetchURL(c.GetBaseURL(), c)
-	if err != nil {
-		panic(err)
-	}
+	// ignore the error, just use it as empty, it always returns empty
+	// even with an error
+	// we use this to pre-populate the scraping data
+	savedFile, _ := decodeCSV(c.GetOutputFile())
 
-	err = exportData(dataArr, c.GetOutputFile())
+	_, err = domain.FetchURL(c, savedFile, func(newDataArr []map[string]string) {
+		err = exportData(newDataArr, c.GetOutputFile())
+		if err != nil {
+			panic(err)
+		}
+	})
 	if err != nil {
 		panic(err)
 	}
