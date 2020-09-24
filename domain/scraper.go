@@ -54,7 +54,15 @@ func FetchURL(c config.Config, dataArr []map[string]string, onNewData func(d []m
 			return
 		}
 
-		page := e.Request.AbsoluteURL(e.Attr("href"))
+		// find out the right src to go on
+		src := e.Attr("src")
+		href := e.Attr("href")
+		nextPageLocation := href
+		if len(href) == 0 {
+			nextPageLocation = src
+		}
+
+		page := e.Request.AbsoluteURL(nextPageLocation)
 
 		// dont go further if we have already gone there
 		for _, pageVisited := range pagesVisited {
@@ -95,6 +103,13 @@ func FetchURL(c config.Config, dataArr []map[string]string, onNewData func(d []m
 
 		// Save the single
 		single["URL"] = page
+
+		// iframe as a selector is a very specific case
+		if c.GetDataSelector() == "iframe" {
+			single["src"] = e.Attr("src")
+			single["href"] = e.Attr("href")
+		}
+
 		dataArr = append(dataArr, single)
 
 		// inform of changes
@@ -107,7 +122,15 @@ func FetchURL(c config.Config, dataArr []map[string]string, onNewData func(d []m
 			return
 		}
 
-		page := e.Request.AbsoluteURL(e.Attr("href"))
+		// find out the right src to go on
+		src := e.Attr("src")
+		href := e.Attr("href")
+		nextPageLocation := href
+		if len(href) == 0 {
+			nextPageLocation = src
+		}
+
+		page := e.Request.AbsoluteURL(nextPageLocation)
 
 		// dont go further if we have already gone there
 		for _, pageVisited := range pagesVisited {
