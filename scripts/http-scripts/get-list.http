@@ -1,0 +1,27 @@
+POST http://localhost:4040/v1 HTTP/1.1
+content-type: application/json
+
+{
+  "actions": [{
+    "service": "crawl",
+    "action": "getList",
+    "params": {
+      "url": "http://www.yougowords.com/1-syllables",
+      "retrieveData": [{
+        "name": "word",
+        "selector": "table.table td:first-child a",
+        "retrieverMethod": "text"
+      }, {
+        "name": "pagination",
+        "selector": ".pagination li a",
+        "retrieverMethod": "attr",
+        "retrieverParams": "href",
+        "isPagination": true
+      }],
+      "options": {
+        "wrapperSelector": "#wordBody",
+        "isJsRendered": false
+      }
+    }
+  }]
+}

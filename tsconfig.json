@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "es2015",
+    "strict": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "noImplicitThis": false,
+
+    "lib": ["es2018", "dom"],
+    "sourceMap": false,
+    "outDir": "bin",
+    "typeRoots": [
+      "node_modules/@types",
+      "typings",
+    ],
+    "baseUrl": ".",
+    "noImplicitAny": false,
+
+    "paths": {
+      "bo-interfaces/src/*": ["node_modules/bo-interfaces/bin/*"]
+    }
+  },
+  "include": [
+    "node_modules/@types/**/*.d.ts",
+    "typings/*.d.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts",
+  ],
+  "exclude": [
+    "node_modules",
+    "bin"
+  ],
+  "compileOnSave": false,
+  "atom": {
+    "rewriteTsconfig": false
+  }
+}
