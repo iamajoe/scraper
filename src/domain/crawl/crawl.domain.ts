@@ -1,4 +1,5 @@
 import { fetchParsedHTMLUrl, isValidURL } from "../../helpers/scrape";
+import { get as getConfig } from '../_config/config';
 import { IJob } from "../job/job.domain";
 
 // -----------------------------------------------
@@ -132,7 +133,10 @@ export const fetch = async (
     }
 
     const $ = await fetchParsedHTMLUrl(url, newJob.options.isJsRendered);
-    const urlResults = getDomData($, newJob.retrieveData, newJob.options);
+    const urlResults = await getDomData($, newJob.retrieveData, newJob.options);
+    if (getConfig().env !== 'production' && getConfig().env !== 'staging') {
+      console.log('fetching:', url, urlResults);
+    }
 
     // merge the old results with the new ones
     const keys = Object.keys(urlResults);
@@ -140,10 +144,15 @@ export const fetch = async (
       const key = keys[e];
 
       newJob.results[key] = newJob.results[key] == null ? [] : newJob.results[key];
-      newJob.results[key] = [
-        ...newJob.results[key],
-        ...urlResults[key]
-      ];
+      for (let f = 0; f < urlResults[key].length; f += 1) {
+        const newResult = urlResults[key][f];
+        const resFound = newJob.results[key].find(v => v === newResult);
+        if (resFound != null) {
+          continue;
+        }
+
+        newJob.results[key].push(newResult);
+      }
     }
 
     // save onto the file what we got

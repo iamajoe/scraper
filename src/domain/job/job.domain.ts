@@ -51,7 +51,7 @@ export const createJob = async (
     retrieveData,
     options,
     results: {}
-  }));
+  }, null, 2));
 
   return id;
 };
@@ -72,12 +72,12 @@ export const runQueue = async () => {
 
       // we need to proceed with this job in this case
       if (!file.resolved && file.queuedUrls.length > 0) {
-        const res = await fetch(file, upd => fs.writeFileSync(filePath, JSON.stringify(upd)));
+        const res = await fetch(file, upd => fs.writeFileSync(filePath, JSON.stringify(upd, null, 2)));
         if (res) {
           // all done, lets resolve it and save it
           file = JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }));
           file.resolved = true;
-          fs.writeFileSync(filePath, JSON.stringify(file));
+          fs.writeFileSync(filePath, JSON.stringify(file, null, 2));
         }
 
         // only one in the queue will be handled
