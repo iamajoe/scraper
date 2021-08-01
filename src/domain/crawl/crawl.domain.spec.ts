@@ -1,7 +1,7 @@
 /* istanbul ignore file */
 import { assert } from 'chai';
 import { rndKey } from '../../_test-utils';
-import { getList } from './crawl.domain';
+import { fetchURL } from './crawl.domain';
 
 // --------------------------------------------------
 // variables
@@ -15,7 +15,7 @@ import { getList } from './crawl.domain';
 // test suite
 
 describe('crawl.domain', () => {
-  describe("getList", () => {
+  describe("fetchURL", () => {
     it('should error if url not valid', async () => {
       const url = rndKey();
 
@@ -24,7 +24,7 @@ describe('crawl.domain', () => {
       let resErr;
 
       try {
-        res = await getList(url, [], {});
+        res = await fetchURL(url, [], {});
       } catch (err) {
         resErr = err;
       }
@@ -39,7 +39,7 @@ describe('crawl.domain', () => {
       const url = 'https://www.workingnomads.co/jobs?category=development';
 
       // make the request
-      const listing = await getList(url, [
+      const listing = await fetchURL(url, [
         {
           name: 'tags',
           selector: '.tag a',

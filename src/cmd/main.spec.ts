@@ -1,6 +1,5 @@
 /* istanbul ignore file */
 
-import * as request from 'supertest';
 import { assert } from 'chai';
 import { init } from './main';
 
@@ -12,7 +11,7 @@ import { init } from './main';
 
 describe("main", () => {
   it('runs', async () => {
-    const res = await init({ hideLogs: true });
+    const res = await init({ hideLogs: true, dontRunQueue: true });
     assert.isOk(res);
     assert.isObject(res);
 

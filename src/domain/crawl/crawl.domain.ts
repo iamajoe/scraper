@@ -1,4 +1,5 @@
 import { fetchParsedHTMLUrl, isValidURL } from "../../helpers/scrape";
+import { IJob } from "../job/job.domain";
 
 // -----------------------------------------------
 // methods
@@ -13,51 +14,13 @@ const sanitizeContent = (arr: string[]) => {
   });
 };
 
-export const getList = async (
-  url: string,
-  retrieveData: {
-    name: string;
-    selector: string;
-    retrieverMethod?: 'text'|'html'|'attr';
-    retrieverParams?: any;
-    isPagination?: boolean;
+export const getDomData = async (
+  $: cheerio.Root,
+  retrieveData: (IJob['retrieveData'][0] & {
     retrieverFn?: (el: cheerio.Cheerio, data: string[], $: cheerio.Root) => any
-  }[],
-  options: {
-    requestTimer?: number;
-    wrapperSelector?: string;
-    isJsRendered?: boolean;
-    ignorePages?: string[];
-  }
+  })[],
+  options: IJob['options']
 ): Promise<{ [key: string]: any[] }> => {
-  if (!isValidURL(url)) {
-    throw {
-      code: 400,
-      message: 'requirements are not fullfilled',
-      originalErr: 'invalid url',
-    };
-  }
-
-  if (retrieveData == null || retrieveData.length === 0) {
-    return {};
-  }
-
-  // check first if the url is on the ignored list
-  options.ignorePages = options.ignorePages == null ? [] : options.ignorePages;
-  const found = options.ignorePages.find(u => u === url) != null;
-  if (found) {
-    return {};
-  }
-
-  console.log('FETCHING URL:', url);
-  // we fetch the page if all is good
-  const $ = await fetchParsedHTMLUrl(url, options.isJsRendered);
-
-  // we ignore the url so that the nested won't pull it again
-  // javascript references work in our favor on this one because we keep
-  // fetching this with the same objects / options and lists
-  options.ignorePages.push(url);
-
   const results: { [key: string]: any[] } = {};
 
   const wrappers = $(options.wrapperSelector);
@@ -102,47 +65,132 @@ export const getList = async (
       } else {
         results[item.name].push(sanitized[0]);
       }
-
-      // handle pagination in case we have it
-      if (!item.isPagination) {
-        continue;
-      }
-
-      // go page by page
-      for (let d = 0; d < results[item.name].length; d += 1) {
-        const page = results[item.name][d];
-        const newUrl = (new URL(page, url)).href;
-
-        if (!isValidURL(newUrl)) {
-          continue;
-        }
-
-        // we set a simple throttle here because we don't want to get banned from the pages
-        // we're crawling
-        let time = options.requestTimer == null ? 500 : options.requestTimer;
-        if (time < 500) {
-          time = 500;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, time));
-
-        // set the recurring request so we can keep ask for urls until it is done
-        const nestedResults = await getList(newUrl, retrieveData, options);
-
-        // merge the old results with the new ones
-        const keys = Object.keys(nestedResults);
-        for (let e = 0; e < keys.length; e += 1) {
-          const key = keys[e];
-
-          results[key] = results[key] == null ? [] : results[key];
-          results[key] = [
-            ...results[key],
-            ...nestedResults[key]
-          ];
-        }
-      }
     }
   }
 
   return results;
+};
+
+export const fetchURL = async(
+  url: string,
+  retrieveData: (IJob['retrieveData'][0] & {
+    retrieverFn?: (el: cheerio.Cheerio, data: string[], $: cheerio.Root) => any
+  })[],
+  options: IJob['options']
+): Promise<{ [key: string]: any[] }> => {
+  if (!isValidURL(url)) {
+    throw {
+      code: 400,
+      message: 'requirements are not fullfilled',
+      originalErr: 'invalid url',
+    };
+  }
+
+  // we fetch the page if all is good
+  const $ = await fetchParsedHTMLUrl(url, options.isJsRendered);
+  return getDomData($, retrieveData, options);
+
+};
+
+export const fetch = async (
+  job: IJob,
+  writeCallback: (updJob: IJob) => void
+) => {
+  if (job.resolved) {
+    return job;
+  }
+
+  const newJob = { ...job };
+  newJob.results = newJob.results == null ? {} : newJob.results;
+  newJob.options.ignorePages = newJob.options.ignorePages == null ? [] : newJob.options.ignorePages;
+
+  // no reason to continue without sufficient data, resolve it
+  if (
+    newJob.retrieveData == null ||
+    newJob.retrieveData.length === 0 ||
+    newJob.queuedUrls == null ||
+    newJob.queuedUrls.length === 0
+  ) {
+    return newJob;
+  }
+
+  let time = newJob.options.requestTimer == null ? 500 : newJob.options.requestTimer;
+  if (time < 500) { time = 500; }
+  newJob.options.requestTimer = time;
+
+  // go url by url crawling
+  for (let i = 0; i < newJob.queuedUrls.length; i += 1) {
+    const url = newJob.queuedUrls[i];
+
+    if (!isValidURL(url)) {
+      continue;
+    }
+
+    let found = newJob.options.ignorePages.find(u => u === url) != null;
+    if (found) {
+      continue;
+    }
+
+    const $ = await fetchParsedHTMLUrl(url, newJob.options.isJsRendered);
+    const urlResults = getDomData($, newJob.retrieveData, newJob.options);
+
+    // merge the old results with the new ones
+    const keys = Object.keys(urlResults);
+    for (let e = 0; e < keys.length; e += 1) {
+      const key = keys[e];
+
+      newJob.results[key] = newJob.results[key] == null ? [] : newJob.results[key];
+      newJob.results[key] = [
+        ...newJob.results[key],
+        ...urlResults[key]
+      ];
+    }
+
+    // save onto the file what we got
+    newJob.options.ignorePages.push(url);
+    writeCallback(newJob);
+
+    // we set a simple throttle here because we don't want to get banned from the pages
+    // we're crawling
+    await new Promise(resolve => setTimeout(resolve, time));
+
+    // no need to go further without pagination data
+    if (newJob.options.pagination?.selector == null) {
+      continue;
+    }
+
+    const oldQueuedUrlsLen = newJob.queuedUrls.length;
+    const pagesResults = await getDomData($, [{
+      ...newJob.options.pagination,
+      name: 'pagination',
+    }], newJob.options);
+
+    // go page by page
+    for (let d = 0; d < pagesResults['pagination'].length; d += 1) {
+      const page = pagesResults['pagination'][d];
+      const newUrl = (new URL(page, url)).href;
+
+      if (!isValidURL(newUrl)) {
+        continue;
+      }
+
+      // is the url ignored? no need to save it if ignored
+      found = newJob.options.ignorePages.find(u => u === newUrl) != null;
+      if (found) {
+        continue;
+      }
+
+      // save to the queued urls of the job, next iteration will pass through this file
+      newJob.queuedUrls.push(newUrl);
+      writeCallback(newJob);
+    }
+
+    // since we have new queued urls because of the pagination we want to break
+    // the current iteration and make a new one
+    if (oldQueuedUrlsLen !== newJob.queuedUrls.length) {
+      return fetch(newJob, writeCallback);
+    }
+  }
+
+  return newJob;
 };

@@ -18,7 +18,7 @@ import { serverSetRoles } from './roles';
 import { getContextAuthId } from './context';
 
 // nested servers
-import { actions as actionsCrawl } from '../../domain/crawl/crawl.server';
+import { actions as actionsJob } from '../../domain/job/job.server';
 import { actions as actionsStatus } from '../../domain/status/status.server';
 
 // --------------------------------------------------
@@ -49,7 +49,7 @@ export type ServerResponse<T> = {
 };
 
 const SERVER_ROUTER_FNS: { [key: string]: { [key: string]: ServerAction<any>; } } = {
-  crawl: actionsCrawl,
+  job: actionsJob,
   status: actionsStatus,
 };
 

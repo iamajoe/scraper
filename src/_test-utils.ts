@@ -13,10 +13,11 @@ export const rndKey = () => `${Math.round(Math.random() * 100000)}`;
 // ------------------------------------
 // V2
 
-export const testInitApp = async (initServer: boolean) => {
+export const testInitApp = async (initServer: boolean, runQueue = false) => {
   const app = await initCmdApp({
     hideLogs: true,
     disableServer: !initServer,
+    dontRunQueue: !runQueue
   });
 
   return app;

@@ -35,6 +35,10 @@ export interface IConfig {
   };
 
   services: {
+    job: {
+      queueTimeMs: number;
+      queueFolder: string;
+    },
     configs: {
       users: {
         resetPasswordSecret: string;
@@ -79,6 +83,23 @@ const setDefault = (original: Partial<IConfig>|null|undefined = null) => {
 
   if (parsedConfig.security.authentication != null && parsedConfig.security.authentication.secret == null) {
     parsedConfig.security.authentication.secret = uuidv4();
+  }
+
+  parsedConfig.services.job = parsedConfig.services.job == null ? {
+    queueTimeMs: 0,
+    queueFolder: '',
+  } : parsedConfig.services.job;
+
+  if (
+    parsedConfig.services.job.queueFolder == null || parsedConfig.services.job.queueFolder?.length === 0
+  ) {
+    parsedConfig.services.job.queueFolder = `${process.cwd()}/queue`;
+  }
+
+  if (
+    parsedConfig.services.job.queueTimeMs == null || parsedConfig.services.job.queueTimeMs < 60000
+  ) {
+    parsedConfig.services.job.queueTimeMs = 60000;
   }
 
   return parsedConfig;

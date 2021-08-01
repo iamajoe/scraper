@@ -3,10 +3,10 @@ content-type: application/json
 
 {
   "actions": [{
-    "service": "crawl",
-    "action": "getList",
+    "service": "job",
+    "action": "create",
     "params": {
-      "url": "http://www.yougowords.com/1-syllables",
+      "queuedUrls": ["http://www.yougowords.com/1-syllables"],
       "retrieveData": [{
         "name": "word",
         "selector": "table.table td:first-child a",

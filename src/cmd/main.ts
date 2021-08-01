@@ -1,12 +1,11 @@
-import * as path from 'path';
 import { Server } from 'http';
 
 // core
-import { getOverallUsage } from './usage';
 import { init as initConfig } from '../domain/_config/config';
 
 import { init as initServer, open as openServer, close as closeServer } from '../interfaces/server/server';
 import { init as initRepos } from '../infrastructure/repositories';
+import { runQueue } from '../domain/job/job.domain';
 
 
 export const init = async (
@@ -15,6 +14,7 @@ export const init = async (
     socketNamespace?: string;
     disableServer?: boolean;
     disableLib?: boolean;
+    dontRunQueue?: boolean;
     bypassConfig?: Partial<ReturnType<typeof initConfig>>;
   } = { hideLogs: false },
 ) => {
@@ -39,6 +39,11 @@ export const init = async (
   if (!options.disableServer && !options.disableLib) {
     server = await initServer(reposData.repos);
     app.server = server;
+  }
+
+  if (!options.dontRunQueue) {
+    // TODO: need to read the errors coming from the queue as well
+    runQueue();
   }
 
   openServer(server);
