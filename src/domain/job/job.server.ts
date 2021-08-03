@@ -76,7 +76,7 @@ const serverCreate: ServerAction<NJob.NCreate.IRequestParams> = async (ctx, repo
     throw {
       code: 400,
       message: 'requirements are not fullfilled',
-      originalErr : JSON.stringify(validateCreate.errors, null, 2)
+      originalErr: JSON.stringify(validateCreate.errors, null, 2)
     }
   }
 
