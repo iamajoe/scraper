@@ -1,6 +1,33 @@
 import { fetchParsedHTMLUrl, isValidURL } from "../../helpers/scrape";
 import { get as getConfig } from '../_config/config';
-import { IJob } from "../job/job.domain";
+
+// -----------------------------------------------
+// variables
+
+export type IJob = {
+  resolved?: boolean,
+  queuedUrls: { [key: string]: boolean }, // true means is resolved
+  retrieveData: {
+    name: string;
+    selector: string;
+    retrieverMethod?: 'text'|'html'|'attr';
+    retrieverParams?: any;
+  }[],
+  options: {
+    requestTimer?: number;
+    wrapperSelector?: string;
+    isJsRendered?: boolean;
+    ignorePages?: string[];
+    pagination?: {
+      selector: string;
+      retrieverMethod?: 'text'|'html'|'attr';
+      retrieverParams?: any;
+    }
+  },
+  results: {
+    [key: string]: any[]
+  }
+};
 
 // -----------------------------------------------
 // methods
@@ -102,36 +129,46 @@ export const fetch = async (
   }
 
   const newJob = { ...job };
-  newJob.results = newJob.results == null ? {} : newJob.results;
-  newJob.options.ignorePages = newJob.options.ignorePages == null ? [] : newJob.options.ignorePages;
 
   // no reason to continue without sufficient data, resolve it
   if (
     newJob.retrieveData == null ||
     newJob.retrieveData.length === 0 ||
-    newJob.queuedUrls == null ||
-    newJob.queuedUrls.length === 0
+    newJob.queuedUrls == null
   ) {
+    return newJob;
+  }
+
+  // do we have urls unresolved?
+  const ignorePages = newJob.options.ignorePages == null ? [] : newJob.options.ignorePages;
+  const urls = Object.keys(newJob.queuedUrls).filter((url) => {
+    // check if url is valid, we don't want to go without valid urls
+    if (!isValidURL(url)) { return false; }
+
+    // being "true" means the url is already resolved
+    if (newJob.queuedUrls[url]) { return false; }
+
+    // is it in ignored pages? remove it
+    const found = ignorePages.find(u => u === url) != null;
+    if (found) { return false; }
+
+    return true;
+  });
+
+  // no reason to continue without urls to resolve
+  if (urls.length === 0) {
     return newJob;
   }
 
   let time = newJob.options.requestTimer == null ? 500 : newJob.options.requestTimer;
   if (time < 500) { time = 500; }
+
   newJob.options.requestTimer = time;
+  newJob.results = newJob.results == null ? {} : newJob.results;
 
   // go url by url crawling
-  for (let i = 0; i < newJob.queuedUrls.length; i += 1) {
-    const url = newJob.queuedUrls[i];
-
-    if (!isValidURL(url)) {
-      continue;
-    }
-
-    let found = newJob.options.ignorePages.find(u => u === url) != null;
-    if (found) {
-      continue;
-    }
-
+  for (let i = 0; i < urls.length; i += 1) {
+    const url = urls[i];
     const $ = await fetchParsedHTMLUrl(url, newJob.options.isJsRendered);
     const urlResults = await getDomData($, newJob.retrieveData, newJob.options);
     if (getConfig().env !== 'production' && getConfig().env !== 'staging') {
@@ -156,7 +193,7 @@ export const fetch = async (
     }
 
     // save onto the file what we got
-    newJob.options.ignorePages.push(url);
+    newJob.queuedUrls[url] = true; // true means it is resolved
     writeCallback(newJob);
 
     // we set a simple throttle here because we don't want to get banned from the pages
@@ -168,7 +205,6 @@ export const fetch = async (
       continue;
     }
 
-    const oldQueuedUrlsLen = newJob.queuedUrls.length;
     const pagesResults = await getDomData($, [{
       ...newJob.options.pagination,
       name: 'pagination',
@@ -177,28 +213,21 @@ export const fetch = async (
     // go page by page
     for (let d = 0; d < pagesResults['pagination'].length; d += 1) {
       const page = pagesResults['pagination'][d];
-      const newUrl = (new URL(page, url)).href;
+      const newPageURL = (new URL(page, url)).href;
 
-      if (!isValidURL(newUrl)) {
-        continue;
-      }
-
-      // is the url ignored? no need to save it if ignored
-      found = newJob.options.ignorePages.find(u => u === newUrl) != null;
-      if (found) {
+      // already on the queue??
+      if (newJob.queuedUrls[newPageURL] != null) {
         continue;
       }
 
       // save to the queued urls of the job, next iteration will pass through this file
-      newJob.queuedUrls.push(newUrl);
+      newJob.queuedUrls[newPageURL] = false; // false means it needs to be resolved
       writeCallback(newJob);
     }
 
     // since we have new queued urls because of the pagination we want to break
     // the current iteration and make a new one
-    if (oldQueuedUrlsLen !== newJob.queuedUrls.length) {
-      return fetch(newJob, writeCallback);
-    }
+    return fetch(newJob, writeCallback);
   }
 
   return newJob;

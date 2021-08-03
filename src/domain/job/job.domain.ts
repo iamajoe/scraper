@@ -2,32 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { get as getConfig } from '../_config/config';
-import { fetch } from '../crawl/crawl.domain';
+import { fetch, IJob } from '../crawl/crawl.domain';
 
-export type IJob = {
-  resolved?: boolean,
-  queuedUrls: string[],
-  retrieveData: {
-    name: string;
-    selector: string;
-    retrieverMethod?: 'text'|'html'|'attr';
-    retrieverParams?: any;
-  }[],
-  options: {
-    requestTimer?: number;
-    wrapperSelector?: string;
-    isJsRendered?: boolean;
-    ignorePages?: string[];
-    pagination?: {
-      selector: string;
-      retrieverMethod?: 'text'|'html'|'attr';
-      retrieverParams?: any;
-    }
-  },
-  results: {
-    [key: string]: any[]
-  }
-};
+// -------------------------------------
+// variables
 
 // -------------------------------------
 // methods
@@ -56,7 +34,7 @@ export const createJob = async (
   return id;
 };
 
-export const runQueue = async () => {
+export const runQueue = async (): Promise<any> => {
   const { queueFolder, queueTimeMs } = getConfig().services.job;
   mkdirp.sync(queueFolder);
 
@@ -71,7 +49,7 @@ export const runQueue = async () => {
       let file: IJob = JSON.parse(fs.readFileSync(filePath, { encoding: 'utf-8' }));
 
       // we need to proceed with this job in this case
-      if (!file.resolved && file.queuedUrls.length > 0) {
+      if (!file.resolved && Object.keys(file.queuedUrls).length > 0) {
         const res = await fetch(file, upd => fs.writeFileSync(filePath, JSON.stringify(upd, null, 2)));
         if (res) {
           // all done, lets resolve it and save it
