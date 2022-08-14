@@ -212,21 +212,25 @@ func (f *Fetch) GetSelectorData(selector string, dataType string, dataOptions st
 	}
 
 	for _, id := range docIds {
-		switch dataType {
-		case "attr":
-			docHTML, err := f.remote.GetOuterHTML(id)
-			if err != nil {
-				return docData, err
-			}
-			docHTML = strings.ReplaceAll(strings.ToValidUTF8(strings.TrimSpace(docHTML), " "), "\n", "")
+		docHTML, err := f.remote.GetOuterHTML(id)
+		if err != nil {
+			return docData, err
+		}
+		docHTML = strings.ReplaceAll(strings.ToValidUTF8(strings.TrimSpace(docHTML), " "), "\n", "")
 
+		// need to setup a javascript so that the browser can handle for us
+		js := []string{
+			fmt.Sprintf("var htmlStr = `%s`;", docHTML),
+			"var wrap = document.createElement(\"div\");",
+			"wrap.insertAdjacentHTML(\"afterbegin\", htmlStr);",
+		}
+
+		switch dataType {
+		case "outerHtml":
+			docData = append(docData, docHTML)
+		case "attr":
 			// need to setup a javascript so that the browser can handle for us
-			js := []string{
-				fmt.Sprintf("var htmlStr = `%s`;", docHTML),
-				"var wrap = document.createElement(\"div\");",
-				"wrap.insertAdjacentHTML(\"afterbegin\", htmlStr);",
-				fmt.Sprintf("return wrap.firstElementChild.getAttribute(`%s`);", dataOptions),
-			}
+			js = append(js, fmt.Sprintf("return wrap.firstElementChild.getAttribute(`%s`);", dataOptions))
 
 			docRaw, err := f.remote.EvaluateWrap(strings.Join(js[:], ""))
 			if err != nil || docRaw == nil {
@@ -234,28 +238,9 @@ func (f *Fetch) GetSelectorData(selector string, dataType string, dataOptions st
 			}
 
 			docData = append(docData, docRaw.(string))
-		case "outerHtml":
-			doc, err := f.remote.GetOuterHTML(id)
-			if err != nil {
-				return docData, err
-			}
-
-			docData = append(docData, doc)
 		default:
-			// this is the code for the innerHTML that we want as default
-			docHTML, err := f.remote.GetOuterHTML(id)
-			if err != nil {
-				return docData, err
-			}
-			docHTML = strings.ReplaceAll(strings.ToValidUTF8(strings.TrimSpace(docHTML), " "), "\n", "")
-
 			// need to setup a javascript so that the browser can handle for us
-			js := []string{
-				fmt.Sprintf("var htmlStr = `%s`;", docHTML),
-				"var wrap = document.createElement(\"div\");",
-				"wrap.insertAdjacentHTML(\"afterbegin\", htmlStr);",
-				"return wrap.firstElementChild.innerHTML;",
-			}
+			js = append(js, "return wrap.firstElementChild.innerHTML;")
 
 			docRaw, err := f.remote.EvaluateWrap(strings.Join(js[:], ""))
 			if err != nil || docRaw == nil {
