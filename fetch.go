@@ -223,6 +223,7 @@ func (f *Fetch) GetSelectorData(selector string, dataType string, dataOptions st
 			fmt.Sprintf("var htmlStr = `%s`;", docHTML),
 			"var wrap = document.createElement(\"div\");",
 			"wrap.insertAdjacentHTML(\"afterbegin\", htmlStr);",
+			"var el = wrap.firstElementChild;",
 		}
 
 		switch dataType {
@@ -230,7 +231,7 @@ func (f *Fetch) GetSelectorData(selector string, dataType string, dataOptions st
 			docData = append(docData, docHTML)
 		case "attr":
 			// need to setup a javascript so that the browser can handle for us
-			js = append(js, fmt.Sprintf("return wrap.firstElementChild.getAttribute(`%s`);", dataOptions))
+			js = append(js, fmt.Sprintf("return el.getAttribute(`%s`);", dataOptions))
 
 			docRaw, err := f.remote.EvaluateWrap(strings.Join(js[:], ""))
 			if err != nil || docRaw == nil {
@@ -240,7 +241,7 @@ func (f *Fetch) GetSelectorData(selector string, dataType string, dataOptions st
 			docData = append(docData, docRaw.(string))
 		default:
 			// need to setup a javascript so that the browser can handle for us
-			js = append(js, "return wrap.firstElementChild.innerHTML;")
+			js = append(js, "return el.innerHTML;")
 
 			docRaw, err := f.remote.EvaluateWrap(strings.Join(js[:], ""))
 			if err != nil || docRaw == nil {
