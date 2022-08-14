@@ -1,24 +1,33 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestFetchGetURL(t *testing.T) {
+	// setup the test
+	server := httptest.NewServer(http.FileServer(http.Dir("./test_cases")))
+	defer server.Close()
 	f := Fetch{9222, nil}
 	defer f.Close()
 
 	// success case
-	err := f.GetURL("http://joesantos.io", time.Millisecond)
+	err := f.GetURL(fmt.Sprintf("%s/case_1.html", server.URL), time.Millisecond)
 	if err != nil {
 		t.Error(err, "GetURL")
 		return
 	}
 
 	// 404 case
-	err = f.GetURL("http://joesantos_abc_def_very_diff_domain.io", time.Millisecond)
+	rand.Seed(time.Now().UnixNano())
+  randomNumber := rand.Intn(99999 - 100 + 1) + 100
+	err = f.GetURL(fmt.Sprintf("http://abc_%d_def_very_diff_domain.io", randomNumber), time.Millisecond)
 	if err == nil {
 		t.Error("domain should have been NOT_RESOLVED")
 		return
@@ -35,18 +44,20 @@ func TestFetchGetSelectorData(t *testing.T) {
 	}
 	tests := []test{
 		// test inner html
-		{"section article:first-child .truncate.title.title--a", "", "", 1, "a class=\"truncate\""},
+		{"body .main p", "", "", 1, "On the main"},
 		// test outer html
-		{"section article:first-child .truncate.title.title--a", "outerHtml", "", 1, "<h2"},
+		{"body .main p", "outerHtml", "", 1, "<p>On the main"},
 		// test attribute
-		{"section article:first-child .truncate.title.title--a a", "attr", "rel", 1, "bookmark"},
+		{"body .main p a", "attr", "href", 1, "/case_nested.html"},
 	}
 
 	// setup the test
+	server := httptest.NewServer(http.FileServer(http.Dir("./test_cases")))
+	defer server.Close()
 	f := Fetch{9222, nil}
 	defer f.Close()
 
-	err := f.GetURL("http://joesantos.io", time.Millisecond)
+	err := f.GetURL(fmt.Sprintf("%s/case_1.html", server.URL), time.Millisecond)
 	if err != nil {
 		t.Error(err, "GetURL")
 		return

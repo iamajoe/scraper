@@ -150,7 +150,7 @@ type Fetch struct {
 
 func (f *Fetch) Open(port int) error {
 	// lets make sure that we kill all the opens before hand
-	if f.remote == nil {
+	if f.remote != nil {
 		// DEV: lets just use the one we have right now
 		if f.port == port {
 			return nil
@@ -190,6 +190,7 @@ func (f *Fetch) GetURL(url string, waitRenderTime time.Duration) error {
 			return err
 		}
 	}
+
 	_, err := f.remote.Navigate(url)
 	if err != nil {
 		return err
