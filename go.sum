@@ -1,0 +1,10 @@
+github.com/gobs/httpclient v0.0.0-20211109032512-d6e824f366f4 h1:nhmq4jGM+BS5bRb1qPf+87+VHK0nJplsa4RnD87RKDs=
+github.com/gobs/httpclient v0.0.0-20211109032512-d6e824f366f4/go.mod h1:uPG1mH4ubcBV9o4vcjJDaFzqIMUW8nz6zg2KkINv4+M=
+github.com/gobs/pretty v0.0.0-20180724170744-09732c25a95b h1:/vQ+oYKu+JoyaMPDsv5FzwuL2wwWBgBbtj/YLCi4LuA=
+github.com/gobs/pretty v0.0.0-20180724170744-09732c25a95b/go.mod h1:Xo4aNUOrJnVruqWQJBtW6+bTBDTniY8yZum5rF3b5jw=
+github.com/gobs/simplejson v0.0.0-20181106204727-c70e6bd5e26b h1:R6nfOvxM/FSBpF6uOitK+RslvoNZ5kUIdOC3HOfiInI=
+github.com/gobs/simplejson v0.0.0-20181106204727-c70e6bd5e26b/go.mod h1:I5K8pVtjLb3st/ifOHRR6S5Z8RS2qj8fUtM0SLndj8Y=
+github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWmnc=
+github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/raff/godet v0.0.0-20210821044141-b21ce8c78e0d h1:v1850JiFEzw0KgiFz3PPX6Mwa5+T6/6+B4N29/BFnfE=
+github.com/raff/godet v0.0.0-20210821044141-b21ce8c78e0d/go.mod h1:7z2HshXnEYBhiFEws0dIy334q8HFK8G5qsFAsmM81LU=
