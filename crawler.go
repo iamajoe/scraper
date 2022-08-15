@@ -1,182 +1,122 @@
 package main
 
 import (
-	"fmt"
-	"net/url"
-	"strings"
 	"time"
 )
 
-func replaceAtIndex(input string, replacement string, index int) string {
-	return input[:index] + replacement + input[index+1:]
-}
-
-func mergeUrls(urlA string, urlB string) (string, error) {
-	// already having a protocol means we already have a built url
-	urlBHasProtocol := strings.Contains(urlB, "http:/") || strings.Contains(urlB, "https:/")
-	if urlBHasProtocol {
-		return urlB, nil
-	}
-
-	// make sure the url has a protocol
-	urlAWithProtocol := urlA
-	urlAHasProtocol := strings.Contains(urlA, "http:/") || strings.Contains(urlA, "https:/")
-	if !urlAHasProtocol {
-		urlAWithProtocol = fmt.Sprintf("https://%s", urlAWithProtocol)
-	}
-
-	urlAParsed, err := url.Parse(urlAWithProtocol)
-	if err != nil {
-		return "", err
-	}
-
-	// remove the first characters if path based, we don't need them
-	urlBParsed := urlB
-	if string(urlBParsed[0]) == "." && string(urlBParsed[1]) == "/" {
-		urlBParsed = replaceAtIndex(urlBParsed, "", 0)
-	}
-
-	if string(urlBParsed[0]) == "/" {
-		urlBParsed = replaceAtIndex(urlBParsed, "", 0)
-	}
-
-	newUrl := fmt.Sprintf("%s://%s/%s", urlAParsed.Scheme, urlAParsed.Hostname(), urlBParsed)
-	return newUrl, nil
-}
-
 type Crawl struct {
-	id                 string        // an unique identifier for the job
 	fetch              *Fetch        // structure that will proceed with the scraping
 	paginationSelector string        // css selector to retrieve pagination urls
 	waitRenderTime     time.Duration // js render waiting time
+	waitRequestTime    time.Duration // time to wait between requests
 	dataSelector       string        // css selector to retrieve content
 	dataType           string        // is the content under which kind of fetch dataType
 	dataOptions        string        // does the dataType has some kind of options?
-	result             []string      // where the data will be stored
-	urlsToFetch        []string      // urls that still need to be fetched
-	urlsFetched        []string      // urls that were already fetched
-	urlsToIgnore       []string      // if an url contains one of these, it will be ignored
-	running            bool          // is the job running?
-}
-
-func (c *Crawl) isAlreadyFetched(url string) bool {
-	for _, urlFetched := range c.urlsFetched {
-		if url == urlFetched {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (c *Crawl) isUrlIgnored(url string) bool {
-	for _, urlIgnore := range c.urlsToIgnore {
-		if strings.Contains(url, urlIgnore) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (c *Crawl) removeFromToFetch(url string) {
-	for i, urlToFetch := range c.urlsToFetch {
-		if url == urlToFetch {
-			c.urlsToFetch = append(c.urlsToFetch[:i], c.urlsToFetch[i+1:]...)
-			return
-		}
-	}
-}
-
-func (c *Crawl) cacheResult(content []string) {
-	// lets make sure that the content is unique
-	for _, singleContent := range content {
-		found := false
-
-		for _, cachedContent := range c.result {
-			if singleContent == cachedContent {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			c.result = append(c.result, singleContent)
-		}
-	}
+	Running            bool          // is the job running?
 }
 
 func (c *Crawl) fetchPage(
 	url string,
-) error {
-	// no need to go further if url was already fetched or we need to ignore it
-	if c.isAlreadyFetched(url) || c.isUrlIgnored(url) {
-		c.removeFromToFetch(url)
-		return nil
-	}
-
+) ([]string, []string, error) {
 	// fetch the url
 	err := c.fetch.GetURL(url, c.waitRenderTime)
 	if err != nil {
-		return err
+		return []string{}, []string{}, err
+	}
+
+	// handle the content
+	contentData, err := c.fetch.GetSelectorData(c.dataSelector, c.dataType, c.dataOptions)
+	if err != nil {
+		return []string{}, []string{}, err
 	}
 
 	// handles pagination
+	pages := []string{}
 	if len(c.paginationSelector) > 0 {
 		paginationData, err := c.fetch.GetSelectorData(c.paginationSelector, "attr", "href")
 		if err != nil {
-			return err
+			return []string{}, []string{}, err
 		}
 
 		// add the page to the request list
 		for _, page := range paginationData {
 			newUrl, err := mergeUrls(url, page)
 			if err != nil {
-				return err
+				return []string{}, []string{}, err
 			}
-			c.urlsToFetch = append(c.urlsToFetch, newUrl)
+
+			// no need to cache url if already in there or already fetched
+			pages = append(pages, newUrl)
 		}
 	}
 
-	// handle the content
-	contentData, err := c.fetch.GetSelectorData(c.dataSelector, c.dataType, c.dataOptions)
-	if err != nil {
-		return err
-	}
+	return contentData, pages, nil
+}
 
-	c.cacheResult(contentData)
-	c.urlsFetched = append(c.urlsFetched, url)
-	c.removeFromToFetch(url)
-
+func (c *Crawl) Stop() error {
+	c.Running = false
 	return nil
 }
 
-func (c *Crawl) Stop() ([]string, error) {
-	c.running = false
+func (c *Crawl) Start(
+	updateCallback func(
+		res []string,
+		toFetch []string,
+		fetched []string,
+		err error,
+	),
+	urlsToFetch []string,
+	urlsFetched []string,
+	urlsToIgnore []string,
+) ([]string, error) {
+	c.Running = true
 
-	err := c.fetch.Close()
-	if err != nil {
-		return c.result, err
-	}
-
-	return c.result, nil
-}
-
-func (c *Crawl) Start() ([]string, error) {
-	c.running = true
-
-	// TODO: cache system on a file
-	// TODO: what to do when finalized?
-	// TODO: setup callbacks / goroutine channels to inform of new states
+	result := []string{}
+	parsedUrlsToFetch := append([]string{}, urlsToFetch...)
+	parsedUrlsFetched := append([]string{}, urlsFetched...)
+	parsedUrlsToIgnore := append([]string{}, urlsToIgnore...)
 
 	// while for all urls to fetch, more will be added while running
 	// because of the pagination, so we can't use a simple range
-	for len(c.urlsToFetch) > 0 && c.running {
-		err := c.fetchPage(c.urlsToFetch[0])
-		if err != nil {
-			return c.result, err
+	for len(parsedUrlsToFetch) > 0 && c.Running {
+		url := parsedUrlsToFetch[0]
+		parsedUrlsToFetch = removeFromArray(url, parsedUrlsToFetch)
+
+		// no need to go further if url was already fetched or we need to ignore it
+		if isInArray(url, parsedUrlsFetched) || isContentInArray(url, parsedUrlsToIgnore) {
+			continue
 		}
+
+		// fetch the page
+		content, pages, err := c.fetchPage(url)
+
+		// do we have new pages?
+		for _, page := range pages {
+			if !isInArray(page, parsedUrlsToFetch) && !isInArray(page, parsedUrlsFetched) {
+				parsedUrlsToFetch = addUniqueInArray([]string{page}, parsedUrlsToFetch)
+			}
+		}
+
+		// add the content
+		result = addUniqueInArray(content, result)
+		parsedUrlsFetched = addUniqueInArray([]string{url}, parsedUrlsFetched)
+
+		updateCallback(result, parsedUrlsToFetch, parsedUrlsFetched, err)
+
+		time.Sleep(c.waitRequestTime)
 	}
 
-	return c.result, nil
+	// all done so lets do a final update
+	updateCallback(result, parsedUrlsToFetch, parsedUrlsFetched, nil)
+
+	c.Running = false
+
+	return result, nil
 }
+
+// TODO: job system should have a list of limited workers
+//			 and those workers would be filled with new jobs from a queue as
+//			 they finish
+//			 use channels to inform the workers of what they should be doing
+//			 or
+//       limit the workers and open and close as please
