@@ -13,7 +13,7 @@ go get .
 go mod download
 ```
 
-## Example
+## Example: Fetch
 
 ```go
 f := Fetch{9222, nil}
@@ -32,6 +32,50 @@ res, err := f.GetSelectorData("body div form", "attr", "action")
 if err != nil {
 	panic(err)
 }
+```
+
+## Example: Crawl
+
+```go
+f := Fetch{9222, nil}
+defer f.Close()
+
+// arguments will later on be passed to Fetch, as such, all that is
+// accepted on Fetch, is also accepted on Crawl
+c := Crawl{
+	&f,
+	".pagination a",
+	time.Millisecond,
+	time.Millisecond,
+	"body div form",
+	"attr",
+	"action",
+	false,
+	[]string{},
+}
+
+res, err := c.Start(
+	func(
+		res []string,
+		toFetch []string,
+		fetched []string,
+		err error,
+	) {
+		// ...
+	},
+	[]string{"http://google.com"},
+	[]string{},
+	[]string{},
+)
+
+// to stop without waiting for it to finish, use:
+err = c.Stop()
+
+// check if it is running with:
+c.Running
+
+// access the result slice with:
+c.Result
 ```
 
 ## Test

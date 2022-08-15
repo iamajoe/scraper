@@ -24,6 +24,7 @@ func TestCrawlerStart(t *testing.T) {
 		"",
 		"",
 		false,
+		[]string{},
 	}
 	defer c.Stop()
 

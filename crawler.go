@@ -13,6 +13,7 @@ type Crawl struct {
 	dataType           string        // is the content under which kind of fetch dataType
 	dataOptions        string        // does the dataType has some kind of options?
 	Running            bool          // is the job running?
+	Result             []string      // where data will be cached
 }
 
 func (c *Crawl) fetchPage(
@@ -71,7 +72,6 @@ func (c *Crawl) Start(
 ) ([]string, error) {
 	c.Running = true
 
-	result := []string{}
 	parsedUrlsToFetch := append([]string{}, urlsToFetch...)
 	parsedUrlsFetched := append([]string{}, urlsFetched...)
 	parsedUrlsToIgnore := append([]string{}, urlsToIgnore...)
@@ -98,20 +98,20 @@ func (c *Crawl) Start(
 		}
 
 		// add the content
-		result = addUniqueInArray(content, result)
+		c.Result = addUniqueInArray(content, c.Result)
 		parsedUrlsFetched = addUniqueInArray([]string{url}, parsedUrlsFetched)
 
-		updateCallback(result, parsedUrlsToFetch, parsedUrlsFetched, err)
+		updateCallback(c.Result, parsedUrlsToFetch, parsedUrlsFetched, err)
 
 		time.Sleep(c.waitRequestTime)
 	}
 
 	// all done so lets do a final update
-	updateCallback(result, parsedUrlsToFetch, parsedUrlsFetched, nil)
+	updateCallback(c.Result, parsedUrlsToFetch, parsedUrlsFetched, nil)
 
 	c.Running = false
 
-	return result, nil
+	return c.Result, nil
 }
 
 // TODO: job system should have a list of limited workers
