@@ -144,7 +144,7 @@ func getSelectorNodeIds(remote *godet.RemoteDebugger, selector string) ([]int, e
 }
 
 type Fetch struct {
-	port int
+	port   int
 	remote *godet.RemoteDebugger
 }
 
@@ -198,7 +198,7 @@ func (f *Fetch) GetURL(url string, waitRenderTime time.Duration) error {
 
 	done := make(chan bool, 1)
 	go waitForLoad(f.remote, waitRenderTime, done)
-	<- done
+	<-done
 
 	return nil
 }

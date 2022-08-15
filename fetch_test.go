@@ -26,7 +26,7 @@ func TestFetchGetURL(t *testing.T) {
 
 	// 404 case
 	rand.Seed(time.Now().UnixNano())
-  randomNumber := rand.Intn(99999 - 100 + 1) + 100
+	randomNumber := rand.Intn(99999-100+1) + 100
 	err = f.GetURL(fmt.Sprintf("http://abc_%d_def_very_diff_domain.io", randomNumber), time.Millisecond)
 	if err == nil {
 		t.Error("domain should have been NOT_RESOLVED")
@@ -36,11 +36,11 @@ func TestFetchGetURL(t *testing.T) {
 
 func TestFetchGetSelectorData(t *testing.T) {
 	type test struct {
-		selector string
-		dataType string
-		dataOptions string
+		selector       string
+		dataType       string
+		dataOptions    string
 		expectedLength int
-		expectedStr string
+		expectedStr    string
 	}
 	tests := []test{
 		// test inner html
@@ -72,7 +72,7 @@ func TestFetchGetSelectorData(t *testing.T) {
 			continue
 		}
 
-		if len(res) != test.expectedLength{
+		if len(res) != test.expectedLength {
 			t.Error(i, "err document length")
 			continue
 		}
