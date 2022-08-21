@@ -12,7 +12,7 @@ import (
 
 func TestFetchGetURL(t *testing.T) {
 	// setup the test
-	server := httptest.NewServer(http.FileServer(http.Dir("./test_cases")))
+	server := httptest.NewServer(http.FileServer(http.Dir("./testdata")))
 	defer server.Close()
 	f := Fetch{9222, nil}
 	defer f.Close()
@@ -52,7 +52,7 @@ func TestFetchGetSelectorData(t *testing.T) {
 	}
 
 	// setup the test
-	server := httptest.NewServer(http.FileServer(http.Dir("./test_cases")))
+	server := httptest.NewServer(http.FileServer(http.Dir("./testdata")))
 	defer server.Close()
 	f := Fetch{9222, nil}
 	defer f.Close()
