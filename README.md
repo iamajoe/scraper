@@ -2,86 +2,24 @@
 
 ## Install dependencies
 
-```
-# install chrome (Ex: ubuntu / debian)
-apt-get update && apt-get install -y fonts-liberation
-wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
-apt-get update && apt-get install -y google-chrome-stable
+### Running with chrome
 
-go get .
-go mod download
+#### Docker
+
+```bash
+docker-compose up
 ```
 
-## Example: Fetch
+##### Mac
 
-```go
-f := Fetch{9222, nil}
-defer f.Close()
+There is a [known issue](https://github.com/docker/for-mac/issues/5766) that doesn't let the docker run on an arm based Mac. As such, I recommend to run the `.docker/entrypoint.sh` without virtualization instead of using the docker.
 
-// wait time is used to make sure that any javascript has been run
-// if the request page is SSR, you could just set time.Millisecond
-err := f.GetURL("http://google.com", time.Second)
-if err != nil {
-	panic(err)
-}
+For example:
 
-// accepted dataType: "attr" | "outerHtml" | (<default>|"innerHTML")
-// only "attr" dataType needs a dataOptions which is the name of the attribute
-res, err := f.GetSelectorData("body div form", "attr", "action")
-if err != nil {
-	panic(err)
-}
+```bash
+CHROME_CLI="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" CHROME_PORT=9222 /bin/bash .docker/chrome_entrypoint.sh
 ```
 
-## Example: Crawl
+## Usage
 
-```go
-f := Fetch{9222, nil}
-defer f.Close()
-
-// arguments will later on be passed to Fetch, as such, all that is
-// accepted on Fetch, is also accepted on Crawl
-c := Crawl{
-	&f,
-	".pagination a",
-	time.Millisecond,
-	time.Millisecond,
-	"body div form",
-	"attr",
-	"action",
-	false,
-	[]string{},
-}
-
-res, err := c.Start(
-	func(
-		res []string,
-		toFetch []string,
-		fetched []string,
-		err error,
-	) {
-		// ...
-	},
-	[]string{"http://google.com"},
-	[]string{},
-	[]string{},
-)
-
-// to stop without waiting for it to finish, use:
-err = c.Stop()
-
-// check if it is running with:
-c.Running
-
-// access the result slice with:
-c.Result
-```
-
-## Test
-
-```
-go fmt
-go vet
-go test
-```
+TODO: setup an example of usage
