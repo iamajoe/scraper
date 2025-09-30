@@ -19,7 +19,3 @@ For example:
 ```bash
 CHROME_CLI="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" CHROME_PORT=9222 /bin/bash .docker/chrome_entrypoint.sh
 ```
-
-## Usage
-
-TODO: setup an example of usage
